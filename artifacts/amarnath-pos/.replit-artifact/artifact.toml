@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Amarnath Master POS"
+version = "1.0.0"
+id = "artifacts/amarnath-pos"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19347
+
+[services.development]
+run = "pnpm --filter @workspace/amarnath-pos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/amarnath-pos", "run", "build" ]
+publicDir = "artifacts/amarnath-pos/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19347"
+BASE_PATH = "/"

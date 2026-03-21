@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background: #020617;
+    color: white;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+.casio-display {
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 0.05em;
+  background: #1a2a1a;
+  border: 1px solid #2d4a2d;
+  color: #7fff7f;
+  text-shadow: 0 0 8px rgba(127, 255, 127, 0.6);
+}
+
+.keypad-btn {
+  transition: transform 80ms, background-color 80ms;
+  active: scale-95;
+}
+
+.keypad-btn:active {
+  transform: scale(0.94);
+}
+
+.chip-active {
+  background: #f59e0b !important;
+  color: #000 !important;
+  font-weight: 700;
+}
+
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}

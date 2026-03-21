@@ -1,0 +1,60 @@
+The "Amarnath Master POS" Prompt
+"Act as an expert frontend developer. Build a single-page, mobile-first POS wholesale calculator in React (Next.js) using Tailwind CSS and Lucide React icons. This app is for a fast-paced wholesale grain business, so speed, blind-typing ergonomics, and an ultra-compact UI are the absolute highest priorities.
+
+1. Core Layout & UI Constraints (Strict):
+
+The entire application MUST be wrapped in a strict mobile container: max-w-md mx-auto h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-white relative.
+
+Top Half (Running Bill): Contains the Header, Header Stats, Item List, and Totals. The container holding the 'Item List' table MUST use flex-1 overflow-y-auto to dynamically stretch and fill all available vertical space.
+
+Bottom Half (Fixed Input): Contains the Weight Chips, Casio Display, and Keypad.
+
+Zero Dead Space: The Totals summary block at the bottom of the Top Half must sit completely flush and snug against the Weight Chips of the Bottom Half. No empty gaps.
+
+High Density: Use text-xs for labels, tight padding (p-1 or p-2), and squish the keypad row heights (h-12 max) to maximize how many items are visible in the running bill.
+
+2. The Settings Modal (Hidden Setup):
+
+Do NOT put 'Customer Name', 'Date', or 'Add Loading' inputs on the main screen.
+
+Add a 'Settings/Gear' icon button in the top header. When clicked, open a Dialog/Modal containing:
+
+Customer Name text input.
+
+Date selector (defaults to today).
+
+'Add Loading (₹4/bag)' toggle switch.
+
+3. Casio Keypad & Workflow Logic:
+
+Weight Chips: A horizontal, scrollable row of buttons directly above the keypad. Exact array order: ['60KG', '50KG', '49KG', '48KG', '45KG', '44KG', '38KG', '35KG', '30KG', '20KG'].
+
+Keypad: Digits 0-9, 00, ., Backspace, an oversized [ X ] button, and a massive [ M+ ] button (use a distinct accent color for M+).
+
+Workflow: I select a Weight Chip -> Type Bag Count -> Tap [ X ] -> Type Rate -> Tap [ M+ ].
+
+Action: Tapping [ M+ ] adds the row to the bill, clears the Casio screen, but KEEPS the last Weight Chip highlighted.
+
+Haptic Feedback: Add window.navigator.vibrate(50) to the onClick of EVERY button in the bottom half (Chips, Numpad, X, M+).
+
+4. Business Math & Totals (Strict Rules):
+
+Item names in the table are dynamic based on the chip (e.g., '50KG Bag').
+
+Light vs. Heavy: The '20KG' chip is strictly the ONLY 'Light' bag. All others are 'Heavy'. Show counts for both in the Header Stats.
+
+Weight: Calculate 'Total Weight' in Quintals (Total KG / 100).
+
+Loading: If the Setting Modal toggle is ON, explicitly show a 'Loading' line item in the subtotals equal to Total Bags * 4.
+
+Rounding: The 'Final Bill' must be strictly rounded to the nearest 10 rupees (e.g., 5012 -> 5010, 5015 -> 5020). Explicitly show the +/- difference in a 'Round Off' stat.
+
+5. Receipt Printer (html2canvas):
+
+Include a 'Receipt' button in the header. Use a React useRef to target ONLY the Top Half (Header, Stats, Item List, Totals).
+
+Use html2canvas to capture this ref, export as a .png, and trigger a download.
+
+Ensure the exported image has a solid #0f172a background.
+
+Crucial: The printed image MUST invisibly inject and display the Customer Name and Date at the top of the receipt, even though they are hidden in the Settings Modal on the live UI."
