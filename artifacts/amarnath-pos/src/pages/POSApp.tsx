@@ -25,7 +25,7 @@ export type Settings = {
   addLoading: boolean;
 };
 
-const WEIGHT_CHIPS = [60, 50, 49, 48, 45, 44, 38, 35, 30, 20];
+
 
 function vibrate() {
   if (window.navigator && window.navigator.vibrate) {
@@ -36,8 +36,8 @@ function vibrate() {
 export function POSApp() {
   const [items, setItems] = useState<BillItem[]>([]);
   const [display, setDisplay] = useState("0");
-  const [selectedWeight, setSelectedWeight] = useState<number | null>(null);
-  const [inputPhase, setInputPhase] = useState<"bags" | "rate">("bags");
+  const [inputPhase, setInputPhase] = useState<"weight" | "bags" | "rate">("weight");
+  const [weightBuffer, setWeightBuffer] = useState<string>("");
   const [bagsBuffer, setBagsBuffer] = useState<string>("");
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<Settings>({
@@ -84,13 +84,18 @@ export function POSApp() {
   const handleClear = useCallback(() => {
     vibrate();
     setDisplay("0");
+    setWeightBuffer("");
     setBagsBuffer("");
-    setInputPhase("bags");
+    setInputPhase("weight");
   }, []);
 
   const handleX = useCallback(() => {
     vibrate();
-    if (inputPhase === "bags" && display !== "0") {
+    if (inputPhase === "weight" && display !== "0") {
+      setWeightBuffer(display);
+      setDisplay("0");
+      setInputPhase("bags");
+    } else if (inputPhase === "bags" && display !== "0") {
       setBagsBuffer(display);
       setDisplay("0");
       setInputPhase("rate");
@@ -99,43 +104,36 @@ export function POSApp() {
 
   const handleMPlus = useCallback(() => {
     vibrate();
-    if (!selectedWeight) return;
-    if (inputPhase === "rate" && bagsBuffer && display !== "0") {
+    if (inputPhase === "rate" && weightBuffer && bagsBuffer && display !== "0") {
+      const weightKg = parseFloat(weightBuffer);
       const bags = parseFloat(bagsBuffer);
       const rate = parseFloat(display);
-      if (isNaN(bags) || isNaN(rate) || bags <= 0 || rate <= 0) return;
+      if (isNaN(weightKg) || isNaN(bags) || isNaN(rate) || weightKg <= 0 || bags <= 0 || rate <= 0) return;
       const amount = bags * rate;
       setItems((prev) => [
         ...prev,
         {
           id: Date.now(),
-          weightKg: selectedWeight,
+          weightKg,
           bags,
           rate,
           amount,
         },
       ]);
       setDisplay("0");
+      setWeightBuffer("");
       setBagsBuffer("");
-      setInputPhase("bags");
+      setInputPhase("weight");
     }
-  }, [selectedWeight, inputPhase, bagsBuffer, display]);
-
-  const handleChip = useCallback((kg: number) => {
-    vibrate();
-    setSelectedWeight(kg);
-    setDisplay("0");
-    setBagsBuffer("");
-    setInputPhase("bags");
-  }, []);
+  }, [inputPhase, weightBuffer, bagsBuffer, display]);
 
   const deleteItem = (id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
   const getDisplayLabel = () => {
-    if (!selectedWeight) return "Select weight";
-    if (inputPhase === "bags") return `${selectedWeight}KG — bags?`;
+    if (inputPhase === "weight") return "Enter weight";
+    if (inputPhase === "bags") return `${weightBuffer}KG — bags?`;
     return `${bagsBuffer} bags @ rate?`;
   };
 
@@ -228,22 +226,6 @@ export function POSApp() {
 
       {/* BOTTOM HALF — Fixed Input */}
       <div className="shrink-0 bg-slate-900 border-t border-slate-800">
-        {/* Weight Chips */}
-        <div className="flex gap-1.5 px-2 py-1.5 overflow-x-auto no-scrollbar">
-          {WEIGHT_CHIPS.map((kg) => (
-            <button
-              key={kg}
-              onClick={() => handleChip(kg)}
-              className={`shrink-0 px-2.5 py-1 rounded text-xs font-semibold keypad-btn border transition-colors ${
-                selectedWeight === kg
-                  ? "bg-amber-500 text-black border-amber-600"
-                  : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
-              }`}
-            >
-              {kg}KG
-            </button>
-          ))}
-        </div>
 
         {/* Casio Display */}
         <div className="mx-2 mb-1.5 px-3 py-1.5 casio-display rounded flex items-center justify-between">
