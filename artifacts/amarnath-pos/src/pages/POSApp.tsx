@@ -45,6 +45,7 @@ export function POSApp() {
     date: new Date().toISOString().slice(0, 10),
     addLoading: false,
   });
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +57,7 @@ export function POSApp() {
   const subtotal = items.reduce((s, i) => s + i.amount, 0);
   const loadingCharge = settings.addLoading ? totalBags * 4 : 0;
   const grandTotal = subtotal + loadingCharge;
-  const rounded = Math.round(grandTotal / 10) * 10;
+  const rounded = Math.ceil(grandTotal / 10) * 10;
   const roundOff = rounded - grandTotal;
 
   const appendDigit = useCallback(
@@ -149,15 +150,36 @@ export function POSApp() {
             <div className="text-[10px] text-slate-400 leading-tight">Wholesale POS</div>
           </div>
           <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-1 rounded border border-slate-700">
+              <span className="text-[9px] font-medium text-slate-300">LOAD</span>
+              <button
+                onClick={() => { vibrate(); setSettings(p => ({ ...p, addLoading: !p.addLoading })); }}
+                className={`relative w-6 h-3 rounded-full transition-colors ${
+                  settings.addLoading ? "bg-amber-500" : "bg-slate-600"
+                }`}
+              >
+                <span
+                  className={`absolute top-[1px] left-[1px] w-2.5 h-2.5 bg-white rounded-full shadow transition-transform ${
+                    settings.addLoading ? "translate-x-3" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
             <button
-              onClick={() => {
+              disabled={isCapturing}
+              onClick={async () => {
                 vibrate();
-                ReceiptCapture(receiptRef, settings);
+                setIsCapturing(true);
+                try {
+                  await ReceiptCapture(receiptRef, settings);
+                } finally {
+                  setIsCapturing(false);
+                }
               }}
-              className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 text-xs px-2 py-1 rounded text-slate-200 keypad-btn"
+              className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-wait text-[11px] px-2 py-1 rounded text-slate-200 keypad-btn font-medium"
             >
               <Printer size={12} />
-              <span>Receipt</span>
+              <span>{isCapturing ? "Saving..." : "Receipt"}</span>
             </button>
             <button
               onClick={() => { vibrate(); setShowSettings(true); }}

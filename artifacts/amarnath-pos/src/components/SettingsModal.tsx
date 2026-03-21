@@ -48,25 +48,7 @@ export function SettingsModal({ settings, onSave, onClose }: SettingsModalProps)
             />
           </div>
 
-          {/* Loading Toggle */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-medium text-white">Add Loading</div>
-              <div className="text-[10px] text-slate-500">₹4 per bag</div>
-            </div>
-            <button
-              onClick={() => setLocal((p) => ({ ...p, addLoading: !p.addLoading }))}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                local.addLoading ? "bg-amber-500" : "bg-slate-600"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  local.addLoading ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+
         </div>
 
         <div className="flex gap-2 mt-4">
