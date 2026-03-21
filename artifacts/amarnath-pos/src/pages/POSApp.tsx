@@ -1,15 +1,15 @@
 import { useState, useRef, useCallback } from "react";
 import {
   Settings,
-  Printer,
   Delete,
   Plus,
+  MessageCircle,
+  Download,
   X,
 } from "lucide-react";
 import { SettingsModal } from "@/components/SettingsModal";
 import { BillTable } from "@/components/BillTable";
 import { TotalsSummary } from "@/components/TotalsSummary";
-import { ReceiptCapture } from "@/components/ReceiptCapture";
 
 export type BillItem = {
   id: number;
@@ -45,9 +45,7 @@ export function POSApp() {
     date: new Date().toISOString().slice(0, 10),
     addLoading: false,
   });
-  const [isCapturing, setIsCapturing] = useState(false);
 
-  const receiptRef = useRef<HTMLDivElement>(null);
 
   const totalBags = items.reduce((s, i) => s + i.bags, 0);
   const heavyBags = items.filter((i) => i.weightKg !== 20).reduce((s, i) => s + i.bags, 0);
@@ -59,6 +57,99 @@ export function POSApp() {
   const grandTotal = subtotal + loadingCharge;
   const rounded = Math.ceil(grandTotal / 10) * 10;
   const roundOff = rounded - grandTotal;
+
+  const handleWhatsApp = useCallback(() => {
+    vibrate();
+    let text = `*AMARNATH PRADEEP KUMAR GARG*\n`;
+    text += `Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}\n`;
+    text += `-----------------------------\n`;
+    items.forEach((item) => {
+      text += `${item.weightKg}KG x ${item.bags} = ₹${item.amount}\n`;
+    });
+    text += `-----------------------------\n`;
+    text += `Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl\n`;
+    text += `Loading: ₹${loadingCharge}\n`;
+    if (roundOff !== 0) text += `Round Off: ${roundOff > 0 ? "+" : ""}${roundOff}\n`;
+    text += `*FINAL BILL: ₹${rounded}*`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded]);
+
+  const handleSaveImage = useCallback(() => {
+    vibrate();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const lineHeights = 20;
+    const padding = 20;
+    
+    canvas.width = 400;
+    canvas.height = padding * 2 + (4 + items.length + 5) * lineHeights + 20;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 16px 'Courier New', Courier, monospace";
+    ctx.textAlign = "center";
+    
+    let y = padding + 16;
+    ctx.fillText("AMARNATH PRADEEP KUMAR GARG", canvas.width / 2, y);
+    
+    ctx.font = "14px 'Courier New', Courier, monospace";
+    y += lineHeights;
+    ctx.fillText(`Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}`, canvas.width / 2, y);
+
+    y += lineHeights;
+    ctx.fillText("--------------------------------------", canvas.width / 2, y);
+
+    ctx.textAlign = "left";
+    y += lineHeights;
+    items.forEach((item) => {
+      const textL = `${item.weightKg}KG x ${item.bags}`;
+      const textR = `₹${item.amount}`;
+      ctx.fillText(textL, padding, y);
+      ctx.textAlign = "right";
+      ctx.fillText(textR, canvas.width - padding, y);
+      ctx.textAlign = "left";
+      y += lineHeights;
+    });
+
+    ctx.textAlign = "center";
+    ctx.fillText("--------------------------------------", canvas.width / 2, y);
+    y += lineHeights;
+    
+    ctx.textAlign = "left";
+    ctx.fillText(`Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl`, padding, y);
+    y += lineHeights;
+    
+    ctx.fillText(`Loading:`, padding, y);
+    ctx.textAlign = "right";
+    ctx.fillText(`₹${loadingCharge}`, canvas.width - padding, y);
+    ctx.textAlign = "left";
+    y += lineHeights;
+
+    if (roundOff !== 0) {
+      ctx.fillText(`Round Off:`, padding, y);
+      ctx.textAlign = "right";
+      ctx.fillText(`${roundOff > 0 ? "+" : ""}${roundOff}`, canvas.width - padding, y);
+      ctx.textAlign = "left";
+      y += lineHeights;
+    }
+
+    ctx.font = "bold 16px 'Courier New', Courier, monospace";
+    ctx.fillText(`FINAL BILL:`, padding, y);
+    ctx.textAlign = "right";
+    ctx.fillText(`₹${rounded}`, canvas.width - padding, y);
+    ctx.textAlign = "left";
+
+    const dataUrl = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "receipt.png";
+    a.click();
+  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded]);
 
   const appendDigit = useCallback(
     (digit: string) => {
@@ -140,7 +231,7 @@ export function POSApp() {
   return (
     <div className="max-w-md mx-auto h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-white relative">
       {/* TOP HALF */}
-      <div ref={receiptRef} className="flex flex-col min-h-0 flex-1 bg-slate-950">
+      <div className="flex flex-col min-h-0 flex-1 bg-slate-950">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
           <div>
@@ -164,20 +255,18 @@ export function POSApp() {
               </button>
             </div>
             <button
-              disabled={isCapturing}
-              onClick={async () => {
-                vibrate();
-                setIsCapturing(true);
-                try {
-                  await ReceiptCapture(receiptRef, settings);
-                } finally {
-                  setIsCapturing(false);
-                }
-              }}
-              className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-wait text-[11px] px-2 py-1 rounded text-slate-200 keypad-btn font-medium"
+              onClick={handleWhatsApp}
+              className="flex items-center gap-1 bg-green-700 hover:bg-green-600 active:bg-green-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
             >
-              <Printer size={12} />
-              <span>{isCapturing ? "Saving..." : "Receipt"}</span>
+              <MessageCircle size={12} />
+              <span>WhatsApp</span>
+            </button>
+            <button
+              onClick={handleSaveImage}
+              className="flex items-center gap-1 bg-blue-700 hover:bg-blue-600 active:bg-blue-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
+            >
+              <Download size={12} />
+              <span>Save Image</span>
             </button>
             <button
               onClick={() => { vibrate(); setShowSettings(true); }}
