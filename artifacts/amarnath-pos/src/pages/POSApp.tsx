@@ -234,7 +234,7 @@ export function POSApp() {
   };
 
   return (
-    <div className="max-w-md mx-auto h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-white relative">
+    <div className="fixed inset-0 mx-auto w-full max-w-md h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-white">
       {/* TOP HALF */}
       <div className="flex flex-col min-h-0 flex-1 bg-slate-950">
         {/* Header */}
