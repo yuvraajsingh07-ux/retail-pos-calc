@@ -68,12 +68,13 @@ export function POSApp() {
     });
     text += `-----------------------------\n`;
     text += `Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl\n`;
+    text += `H: ${heavyBags} | L: ${lightBags}\n`;
     text += `Loading: ₹${loadingCharge}\n`;
     if (roundOff !== 0) text += `Round Off: ${roundOff > 0 ? "+" : ""}${roundOff}\n`;
     text += `*FINAL BILL: ₹${rounded}*`;
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded]);
+  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags]);
 
   const handleSaveImage = useCallback(() => {
     vibrate();
@@ -124,6 +125,9 @@ export function POSApp() {
     ctx.fillText(`Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl`, padding, y);
     y += lineHeights;
     
+    ctx.fillText(`H: ${heavyBags} | L: ${lightBags}`, padding, y);
+    y += lineHeights;
+
     ctx.fillText(`Loading:`, padding, y);
     ctx.textAlign = "right";
     ctx.fillText(`₹${loadingCharge}`, canvas.width - padding, y);
@@ -147,9 +151,10 @@ export function POSApp() {
     const dataUrl = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = "receipt.png";
+    const sanitizedName = (settings.customerName || "Cash_Sale").replace(/\s+/g, '_');
+    a.download = `${settings.date}_${sanitizedName}.png`;
     a.click();
-  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded]);
+  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags]);
 
   const appendDigit = useCallback(
     (digit: string) => {
@@ -266,7 +271,7 @@ export function POSApp() {
               className="flex items-center gap-1 bg-blue-700 hover:bg-blue-600 active:bg-blue-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
             >
               <Download size={12} />
-              <span>Save Image</span>
+              <span>Image</span>
             </button>
             <button
               onClick={() => { vibrate(); setShowSettings(true); }}
