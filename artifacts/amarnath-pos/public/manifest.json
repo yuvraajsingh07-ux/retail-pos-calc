@@ -1,7 +1,7 @@
 {
-  "name": "Amarnath Master POS",
-  "short_name": "Amarnath",
-  "description": "Wholesale POS calculator for Amarnath Pradeep Kumar Garg",
+  "name": "APKG Master POS",
+  "short_name": "APKG",
+  "description": "Wholesale POS calculator — APKG",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,10 +9,22 @@
   "background_color": "#0f172a",
   "icons": [
     {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

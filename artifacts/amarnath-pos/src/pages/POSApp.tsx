@@ -5,6 +5,7 @@ import {
   Plus,
   MessageCircle,
   Download,
+  RefreshCw,
   Wheat,
 } from "lucide-react";
 import {
@@ -87,7 +88,18 @@ export function POSApp() {
     }
   }, []);
 
-  // ── Export handlers ──────────────────────────────────────────────────────────
+  // ── New Bill reset ───────────────────────────────────────────────────────────
+  const handleNewBill = useCallback(() => {
+    vibrate();
+    setItems([]);
+    setDisplay("0");
+    setWeightBuffer("");
+    setBagsBuffer("");
+    setInputPhase("weight");
+    setSettings((p) => ({ ...p, customerName: "" }));
+  }, []);
+
+  // ── Export handlers ───────────────────────────────────────────────────────────
   const handleWhatsApp = useCallback(() => {
     vibrate();
     let text = `*AMARNATH PRADEEP KUMAR GARG*\n`;
@@ -336,11 +348,8 @@ export function POSApp() {
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-1.5">
-            <Wheat size={20} className="text-amber-400 shrink-0" />
-            <div>
-              <div className="text-xs font-bold text-amber-400 leading-tight">AMARNATH MASTER</div>
-              <div className="text-[10px] text-slate-400 leading-tight">Wholesale POS</div>
-            </div>
+            <img src="/icon.png" alt="APKG" className="w-6 h-6 rounded-md object-cover shrink-0" />
+            <div className="text-xs font-bold text-amber-400 leading-tight tracking-wider">APKG</div>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-1 rounded border border-slate-700">
@@ -358,6 +367,13 @@ export function POSApp() {
                 />
               </button>
             </div>
+            <button
+              onClick={handleNewBill}
+              className="flex items-center gap-1 bg-slate-600 hover:bg-slate-500 active:bg-slate-400 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
+            >
+              <RefreshCw size={11} />
+              <span>New</span>
+            </button>
             <button
               onClick={handleWhatsApp}
               className="flex items-center gap-1 bg-green-700 hover:bg-green-600 active:bg-green-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
