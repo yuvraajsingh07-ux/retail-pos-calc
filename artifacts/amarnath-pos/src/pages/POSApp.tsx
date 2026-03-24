@@ -1,12 +1,21 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Settings,
   Delete,
   Plus,
   MessageCircle,
   Download,
-  X,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { SettingsModal } from "@/components/SettingsModal";
 import { BillTable } from "@/components/BillTable";
 import { TotalsSummary } from "@/components/TotalsSummary";
@@ -24,8 +33,6 @@ export type Settings = {
   date: string;
   addLoading: boolean;
 };
-
-
 
 function vibrate() {
   if (window.navigator && window.navigator.vibrate) {
@@ -46,7 +53,7 @@ export function POSApp() {
     addLoading: false,
   });
 
-
+  // ── Derived totals ──────────────────────────────────────────────────────────
   const totalBags = items.reduce((s, i) => s + i.bags, 0);
   const heavyBags = items.filter((i) => i.weightKg !== 20).reduce((s, i) => s + i.bags, 0);
   const lightBags = items.filter((i) => i.weightKg === 20).reduce((s, i) => s + i.bags, 0);
@@ -58,6 +65,28 @@ export function POSApp() {
   const rounded = Math.ceil(grandTotal / 10) * 10;
   const roundOff = rounded - grandTotal;
 
+  // ── DnD sensors (delay-based for mobile-safe touch) ─────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    })
+  );
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setItems((prev) => {
+        const oldIndex = prev.findIndex((i) => i.id === active.id);
+        const newIndex = prev.findIndex((i) => i.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  }, []);
+
+  // ── Export handlers ──────────────────────────────────────────────────────────
   const handleWhatsApp = useCallback(() => {
     vibrate();
     let text = `*AMARNATH PRADEEP KUMAR GARG*\n`;
@@ -72,7 +101,6 @@ export function POSApp() {
     text += `Loading: ₹${loadingCharge}\n`;
     if (roundOff !== 0) text += `Round Off: ${roundOff > 0 ? "+" : ""}${roundOff}\n`;
     text += `*FINAL BILL: ₹${rounded}*`;
-
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags]);
 
@@ -84,20 +112,18 @@ export function POSApp() {
 
     const lineHeights = 20;
     const padding = 20;
-    
     canvas.width = 400;
     canvas.height = padding * 2 + (4 + items.length + 5) * lineHeights + 20;
 
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     ctx.fillStyle = "#000000";
     ctx.font = "bold 16px 'Courier New', Courier, monospace";
     ctx.textAlign = "center";
-    
+
     let y = padding + 16;
     ctx.fillText("AMARNATH PRADEEP KUMAR GARG", canvas.width / 2, y);
-    
+
     ctx.font = "14px 'Courier New', Courier, monospace";
     y += lineHeights;
     ctx.fillText(`Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}`, canvas.width / 2, y);
@@ -120,11 +146,10 @@ export function POSApp() {
     ctx.textAlign = "center";
     ctx.fillText("--------------------------------------", canvas.width / 2, y);
     y += lineHeights;
-    
+
     ctx.textAlign = "left";
     ctx.fillText(`Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl`, padding, y);
     y += lineHeights;
-    
     ctx.fillText(`H: ${heavyBags} | L: ${lightBags}`, padding, y);
     y += lineHeights;
 
@@ -151,11 +176,12 @@ export function POSApp() {
     const dataUrl = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = dataUrl;
-    const sanitizedName = (settings.customerName || "Cash_Sale").replace(/\s+/g, '_');
+    const sanitizedName = (settings.customerName || "Cash_Sale").replace(/\s+/g, "_");
     a.download = `${settings.date}_${sanitizedName}.png`;
     a.click();
   }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags]);
 
+  // ── Keypad handlers ──────────────────────────────────────────────────────────
   const appendDigit = useCallback(
     (digit: string) => {
       vibrate();
@@ -208,13 +234,7 @@ export function POSApp() {
       const amount = bags * rate;
       setItems((prev) => [
         ...prev,
-        {
-          id: Date.now(),
-          weightKg,
-          bags,
-          rate,
-          amount,
-        },
+        { id: Date.now(), weightKg, bags, rate, amount },
       ]);
       setDisplay("0");
       setWeightBuffer("");
@@ -223,9 +243,9 @@ export function POSApp() {
     }
   }, [inputPhase, weightBuffer, bagsBuffer, display]);
 
-  const deleteItem = (id: number) => {
+  const deleteItem = useCallback((id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
-  };
+  }, []);
 
   const getDisplayLabel = () => {
     if (inputPhase === "weight") return "Enter weight";
@@ -235,8 +255,10 @@ export function POSApp() {
 
   return (
     <div className="fixed inset-0 mx-auto w-full max-w-md h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-white">
-      {/* TOP HALF */}
+
+      {/* ── TOP HALF ─────────────────────────────────────────────────── */}
       <div className="flex flex-col min-h-0 flex-1 bg-slate-950">
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
           <div>
@@ -302,9 +324,15 @@ export function POSApp() {
           </div>
         </div>
 
-        {/* Item List */}
+        {/* Item List — flex-1 + overflow-y-auto so it fills all remaining space */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          <BillTable items={items} onDelete={deleteItem} />
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <BillTable items={items} onDelete={deleteItem} />
+          </DndContext>
         </div>
 
         {/* Totals */}
@@ -318,12 +346,13 @@ export function POSApp() {
         />
       </div>
 
-      {/* BOTTOM HALF — Fixed Input */}
+      {/* ── BOTTOM HALF — Fixed Input ────────────────────────────────── */}
       <div className="shrink-0 bg-slate-900 border-t border-slate-800">
 
         {/* Casio Display */}
         <div className="mx-2 mb-1.5 px-3 py-1.5 casio-display rounded flex items-center justify-between">
-          <span className="text-[10px] text-green-700 truncate max-w-[40%]">{getDisplayLabel()}</span>
+          {/* FIX #2 — Neon label: was text-green-700, now text-emerald-400/90 */}
+          <span className="text-[10px] text-emerald-400/90 truncate max-w-[40%]">{getDisplayLabel()}</span>
           <span className="text-lg font-bold text-right">{display}</span>
         </div>
 
