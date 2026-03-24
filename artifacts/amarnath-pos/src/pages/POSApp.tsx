@@ -5,6 +5,7 @@ import {
   Plus,
   MessageCircle,
   Download,
+  Wheat,
 } from "lucide-react";
 import {
   DndContext,
@@ -93,7 +94,8 @@ export function POSApp() {
     text += `Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}\n`;
     text += `-----------------------------\n`;
     items.forEach((item) => {
-      text += `${item.weightKg}KG x ${item.bags} = ₹${item.amount}\n`;
+      const rowWt = item.weightKg * item.bags;
+      text += `${item.weightKg}KG x ${item.bags} = ${rowWt}kg @ ₹${item.rate.toFixed(0)} -> ₹${item.amount.toLocaleString("en-IN")}\n`;
     });
     text += `-----------------------------\n`;
     text += `Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl\n`;
@@ -333,9 +335,12 @@ export function POSApp() {
 
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
-          <div>
-            <div className="text-xs font-bold text-amber-400 leading-tight">AMARNATH MASTER</div>
-            <div className="text-[10px] text-slate-400 leading-tight">Wholesale POS</div>
+          <div className="flex items-center gap-1.5">
+            <Wheat size={20} className="text-amber-400 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-amber-400 leading-tight">AMARNATH MASTER</div>
+              <div className="text-[10px] text-slate-400 leading-tight">Wholesale POS</div>
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-1 rounded border border-slate-700">
@@ -423,7 +428,7 @@ export function POSApp() {
 
         {/* Casio Display */}
         <div className="mx-2 mb-1.5 px-3 py-1.5 casio-display rounded flex items-center justify-between">
-          <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-400 truncate max-w-[40%]">{getDisplayLabel()}</span>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 truncate max-w-[40%]">{getDisplayLabel()}</span>
           <span className="text-lg font-bold text-right">{display}</span>
         </div>
 
