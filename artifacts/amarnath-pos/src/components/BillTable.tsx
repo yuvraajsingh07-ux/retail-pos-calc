@@ -36,6 +36,8 @@ function SortableRow({ item, idx, onDelete }: SortableRowProps) {
     zIndex: isDragging ? 10 : "auto",
   };
 
+  const totalWt = item.weightKg * item.bags;
+
   return (
     <tr
       ref={setNodeRef}
@@ -43,7 +45,7 @@ function SortableRow({ item, idx, onDelete }: SortableRowProps) {
       className={`border-t border-slate-800 ${idx % 2 === 0 ? "bg-slate-950" : "bg-slate-900/40"}`}
     >
       {/* Grip handle */}
-      <td className="pl-1 pr-0 py-1 w-[8%]">
+      <td className="pl-1 pr-0 py-1 w-[6%]">
         <button
           {...attributes}
           {...listeners}
@@ -53,10 +55,14 @@ function SortableRow({ item, idx, onDelete }: SortableRowProps) {
           <GripVertical size={12} />
         </button>
       </td>
-      <td className="px-1 py-1 font-medium text-amber-300 truncate w-[26%]">{item.weightKg}KG Bag</td>
-      <td className="text-right px-1 py-1 text-slate-300 w-[14%]">{item.bags}</td>
-      <td className="text-right px-1 py-1 text-slate-400 w-[17%]">{item.rate.toFixed(0)}</td>
-      <td className="text-right px-1 py-1 font-semibold text-white w-[25%]">
+      {/* Item (weight label) */}
+      <td className="px-1 py-1 w-[22%]">
+        <div className="font-medium text-amber-300 text-[11px] leading-tight">{item.weightKg}KG Bag</div>
+        <div className="text-[9px] text-slate-500 leading-tight">{totalWt} kg total</div>
+      </td>
+      <td className="text-right px-1 py-1 text-slate-300 w-[12%]">{item.bags}</td>
+      <td className="text-right px-1 py-1 text-slate-400 w-[15%]">{item.rate.toFixed(0)}</td>
+      <td className="text-right px-1 py-1 font-semibold text-white w-[35%]">
         ₹{item.amount.toLocaleString("en-IN")}
       </td>
       <td className="text-center py-1 w-[10%]">
@@ -87,11 +93,11 @@ export function BillTable({ items, onDelete }: BillTableProps) {
     <table className="w-full text-xs table-fixed">
       <thead className="bg-slate-900 sticky top-0 z-10">
         <tr className="text-slate-500">
-          <th className="w-[8%]"></th>
-          <th className="text-left px-1 py-1 w-[26%]">Item</th>
-          <th className="text-right px-1 py-1 w-[14%]">Bags</th>
-          <th className="text-right px-1 py-1 w-[17%]">Rate</th>
-          <th className="text-right px-1 py-1 w-[25%]">Amt</th>
+          <th className="w-[6%]"></th>
+          <th className="text-left px-1 py-1 w-[22%]">Item</th>
+          <th className="text-right px-1 py-1 w-[12%]">Bags</th>
+          <th className="text-right px-1 py-1 w-[15%]">Rate</th>
+          <th className="text-right px-1 py-1 w-[35%]">Amt</th>
           <th className="w-[10%]"></th>
         </tr>
       </thead>

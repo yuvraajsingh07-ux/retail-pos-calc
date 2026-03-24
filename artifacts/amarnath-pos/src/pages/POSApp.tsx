@@ -110,69 +110,141 @@ export function POSApp() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const lineHeights = 20;
-    const padding = 20;
-    canvas.width = 400;
-    canvas.height = padding * 2 + (4 + items.length + 5) * lineHeights + 20;
+    // ── Layout constants ──────────────────────────────────────────────
+    const W = 520;
+    const PAD = 22;
+    const ROW_H = 22;      // row height for item rows
+    const LH = 20;         // general line height
+    const MONO = "'Courier New', Courier, monospace";
 
+    // Column x positions (left-aligned start)
+    const COL_ITEM = PAD;
+    const COL_BAGS = 160;
+    const COL_WT   = 215;
+    const COL_RATE = 295;
+    const COL_AMT  = W - PAD;  // right-aligned
+
+    // Dynamic height calculation
+    const extraRows = roundOff !== 0 ? 1 : 0;
+    const totalRows =
+      2  // title + customer line
+      + 1  // separator
+      + 1  // table header
+      + 1  // separator
+      + items.length
+      + 1  // separator
+      + 3  // bags / weight / H-L
+      + (settings.addLoading ? 1 : 0)
+      + extraRows
+      + 2  // final bill (2 lines for bold)
+      + 1; // bottom padding row
+    canvas.width = W;
+    canvas.height = PAD * 2 + totalRows * LH + 10;
+
+    // ── Background ────────────────────────────────────────────────────
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#000000";
-    ctx.font = "bold 16px 'Courier New', Courier, monospace";
-    ctx.textAlign = "center";
 
-    let y = padding + 16;
-    ctx.fillText("AMARNATH PRADEEP KUMAR GARG", canvas.width / 2, y);
+    const drawSeparator = (y: number) => {
+      ctx.beginPath();
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 1;
+      ctx.moveTo(PAD, y);
+      ctx.lineTo(W - PAD, y);
+      ctx.stroke();
+    };
 
-    ctx.font = "14px 'Courier New', Courier, monospace";
-    y += lineHeights;
-    ctx.fillText(`Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}`, canvas.width / 2, y);
-
-    y += lineHeights;
-    ctx.fillText("--------------------------------------", canvas.width / 2, y);
-
-    ctx.textAlign = "left";
-    y += lineHeights;
-    items.forEach((item) => {
-      const textL = `${item.weightKg}KG x ${item.bags}`;
-      const textR = `₹${item.amount}`;
-      ctx.fillText(textL, padding, y);
+    const textR = (text: string, x: number, y: number) => {
+      const prev = ctx.textAlign;
       ctx.textAlign = "right";
-      ctx.fillText(textR, canvas.width - padding, y);
+      ctx.fillText(text, x, y);
+      ctx.textAlign = prev;
+    };
+
+    let y = PAD + 18;
+
+    // ── Header ────────────────────────────────────────────────────────
+    ctx.font = `bold 17px ${MONO}`;
+    ctx.textAlign = "center";
+    ctx.fillText("AMARNATH PRADEEP KUMAR GARG", W / 2, y);
+
+    y += LH;
+    ctx.font = `13px ${MONO}`;
+    ctx.fillText(
+      `Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}`,
+      W / 2,
+      y
+    );
+
+    y += LH + 4;
+    drawSeparator(y);
+    y += 10;
+
+    // ── Table header ──────────────────────────────────────────────────
+    ctx.font = `bold 12px ${MONO}`;
+    ctx.textAlign = "left";
+    ctx.fillText("ITEM", COL_ITEM, y);
+    ctx.fillText("BAGS", COL_BAGS, y);
+    ctx.fillText("WT(kg)", COL_WT, y);
+    ctx.fillText("RATE", COL_RATE, y);
+    textR("AMOUNT", COL_AMT, y);
+
+    y += 6;
+    drawSeparator(y);
+    y += ROW_H - 4;
+
+    // ── Item rows ─────────────────────────────────────────────────────
+    ctx.font = `12px ${MONO}`;
+    items.forEach((item) => {
+      const totalWt = item.weightKg * item.bags;
       ctx.textAlign = "left";
-      y += lineHeights;
+      ctx.fillText(`${item.weightKg}KG Bag`, COL_ITEM, y);
+      ctx.fillText(String(item.bags), COL_BAGS, y);
+      ctx.fillText(String(totalWt), COL_WT, y);
+      ctx.fillText(`${item.rate.toFixed(0)}`, COL_RATE, y);
+      textR(`Rs.${item.amount.toLocaleString("en-IN")}`, COL_AMT, y);
+      y += ROW_H;
     });
 
-    ctx.textAlign = "center";
-    ctx.fillText("--------------------------------------", canvas.width / 2, y);
-    y += lineHeights;
+    // ── Separator after items ─────────────────────────────────────────
+    y += 2;
+    drawSeparator(y);
+    y += LH;
 
+    // ── Subtotals block ───────────────────────────────────────────────
+    ctx.font = `12px ${MONO}`;
     ctx.textAlign = "left";
-    ctx.fillText(`Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl`, padding, y);
-    y += lineHeights;
-    ctx.fillText(`H: ${heavyBags} | L: ${lightBags}`, padding, y);
-    y += lineHeights;
+    ctx.fillText(`Total Bags : ${totalBags}`, PAD, y);
+    y += LH;
+    ctx.fillText(`Total Weight: ${totalQuintals.toFixed(2)} qtl`, PAD, y);
+    y += LH;
+    ctx.fillText(`Heavy : ${heavyBags}  |  Light : ${lightBags}`, PAD, y);
+    y += LH;
 
-    ctx.fillText(`Loading:`, padding, y);
-    ctx.textAlign = "right";
-    ctx.fillText(`₹${loadingCharge}`, canvas.width - padding, y);
-    ctx.textAlign = "left";
-    y += lineHeights;
-
-    if (roundOff !== 0) {
-      ctx.fillText(`Round Off:`, padding, y);
-      ctx.textAlign = "right";
-      ctx.fillText(`${roundOff > 0 ? "+" : ""}${roundOff}`, canvas.width - padding, y);
-      ctx.textAlign = "left";
-      y += lineHeights;
+    if (settings.addLoading) {
+      ctx.fillText(`Loading (Rs.4/bag):`, PAD, y);
+      textR(`Rs.${loadingCharge}`, COL_AMT, y);
+      y += LH;
     }
 
-    ctx.font = "bold 16px 'Courier New', Courier, monospace";
-    ctx.fillText(`FINAL BILL:`, padding, y);
-    ctx.textAlign = "right";
-    ctx.fillText(`₹${rounded}`, canvas.width - padding, y);
-    ctx.textAlign = "left";
+    if (roundOff !== 0) {
+      ctx.fillText(`Round Off:`, PAD, y);
+      textR(`${roundOff > 0 ? "+" : ""}${roundOff}`, COL_AMT, y);
+      y += LH;
+    }
 
+    // ── Final bill ────────────────────────────────────────────────────
+    y += 4;
+    drawSeparator(y);
+    y += LH;
+
+    ctx.font = `bold 16px ${MONO}`;
+    ctx.textAlign = "left";
+    ctx.fillText("FINAL BILL", PAD, y);
+    textR(`Rs.${rounded.toLocaleString("en-IN")}`, COL_AMT, y);
+
+    // ── Download ──────────────────────────────────────────────────────
     const dataUrl = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = dataUrl;
@@ -351,8 +423,7 @@ export function POSApp() {
 
         {/* Casio Display */}
         <div className="mx-2 mb-1.5 px-3 py-1.5 casio-display rounded flex items-center justify-between">
-          {/* FIX #2 — Neon label: was text-green-700, now text-emerald-400/90 */}
-          <span className="text-[10px] text-emerald-400/90 truncate max-w-[40%]">{getDisplayLabel()}</span>
+          <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-400 truncate max-w-[40%]">{getDisplayLabel()}</span>
           <span className="text-lg font-bold text-right">{display}</span>
         </div>
 
