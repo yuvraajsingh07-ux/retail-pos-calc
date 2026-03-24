@@ -345,13 +345,15 @@ export function POSApp() {
       {/* ── TOP HALF ─────────────────────────────────────────────────── */}
       <div className="flex flex-col min-h-0 flex-1 bg-slate-950">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <img src="/icon.png" alt="APKG" className="w-6 h-6 rounded-md object-cover shrink-0" />
-            <div className="text-xs font-bold text-amber-400 leading-tight tracking-wider">APKG</div>
-          </div>
-          <div className="flex items-center gap-1.5">
+        {/* Header — centered buttons, settings pinned right */}
+        <div className="relative flex items-center px-2 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
+
+          {/* Dummy spacer — same width as settings button so center group is truly centered */}
+          <div className="w-[28px] shrink-0" />
+
+          {/* Center group */}
+          <div className="flex-1 flex items-center justify-center gap-1.5">
+            {/* LOAD toggle */}
             <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-1 rounded border border-slate-700">
               <span className="text-[9px] font-medium text-slate-300">LOAD</span>
               <button
@@ -367,6 +369,7 @@ export function POSApp() {
                 />
               </button>
             </div>
+            {/* New */}
             <button
               onClick={handleNewBill}
               className="flex items-center gap-1 bg-slate-600 hover:bg-slate-500 active:bg-slate-400 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
@@ -374,13 +377,15 @@ export function POSApp() {
               <RefreshCw size={11} />
               <span>New</span>
             </button>
+            {/* WhatsApp */}
             <button
               onClick={handleWhatsApp}
               className="flex items-center gap-1 bg-green-700 hover:bg-green-600 active:bg-green-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
             >
               <MessageCircle size={12} />
-              <span>WhatsApp</span>
+              <span>WA</span>
             </button>
+            {/* Image */}
             <button
               onClick={handleSaveImage}
               className="flex items-center gap-1 bg-blue-700 hover:bg-blue-600 active:bg-blue-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
@@ -388,14 +393,17 @@ export function POSApp() {
               <Download size={12} />
               <span>Image</span>
             </button>
-            <button
-              onClick={() => { vibrate(); setShowSettings(true); }}
-              className="bg-slate-700 hover:bg-slate-600 p-1 rounded keypad-btn"
-            >
-              <Settings size={14} className="text-slate-300" />
-            </button>
           </div>
+
+          {/* Settings — pinned to right */}
+          <button
+            onClick={() => { vibrate(); setShowSettings(true); }}
+            className="w-[28px] flex items-center justify-center bg-slate-700 hover:bg-slate-600 p-1 rounded keypad-btn shrink-0"
+          >
+            <Settings size={14} className="text-slate-300" />
+          </button>
         </div>
+
 
         {/* Header Stats */}
         <div className="flex gap-0 bg-slate-900 border-b border-slate-800 shrink-0">
