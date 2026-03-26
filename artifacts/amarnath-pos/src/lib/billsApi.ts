@@ -8,6 +8,9 @@ export interface SavedBill {
   items: BillItem[];
   total_amount: number;
   total_bags: number;
+  cash_amount: number;
+  online_amount: number;
+  udhar_amount: number;
 }
 
 export interface BillPayload {
@@ -16,6 +19,9 @@ export interface BillPayload {
   items: BillItem[];
   total_amount: number;
   total_bags: number;
+  cash_amount: number;
+  online_amount: number;
+  udhar_amount: number;
 }
 
 /** Insert a new bill row. Returns the new row's id. */
@@ -47,7 +53,7 @@ export async function updateBill(
 export async function fetchBills(): Promise<SavedBill[]> {
   const { data, error } = await supabase
     .from("saved_bills")
-    .select("id, customer_name, bill_date, items, total_amount, total_bags")
+    .select("id, customer_name, bill_date, items, total_amount, total_bags, cash_amount, online_amount, udhar_amount")
     .order("bill_date", { ascending: false });
 
   if (error) throw new Error(error.message);

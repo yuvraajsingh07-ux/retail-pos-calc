@@ -5,7 +5,7 @@ import type { BillItem } from "@/pages/POSApp";
 
 interface HistoryDrawerProps {
   onClose: () => void;
-  onLoad: (bill: { id: string; customerName: string; date: string; items: BillItem[] }) => void;
+  onLoad: (bill: { id: string; customerName: string; date: string; items: BillItem[]; cash_amount: number; online_amount: number; udhar_amount: number }) => void;
 }
 
 export function HistoryDrawer({ onClose, onLoad }: HistoryDrawerProps) {
@@ -91,6 +91,9 @@ export function HistoryDrawer({ onClose, onLoad }: HistoryDrawerProps) {
                       customerName: bill.customer_name,
                       date: bill.bill_date.slice(0, 10),
                       items: bill.items,
+                      cash_amount: bill.cash_amount,
+                      online_amount: bill.online_amount,
+                      udhar_amount: bill.udhar_amount,
                     })
                   }
                   className={`w-full text-left px-3 py-3 flex items-center justify-between gap-2 active:bg-slate-800 transition-colors ${

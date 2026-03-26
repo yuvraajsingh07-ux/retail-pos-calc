@@ -56,6 +56,9 @@ export function POSApp() {
   const [showHistory, setShowHistory] = useState(false);
   const [currentBillId, setCurrentBillId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<"cash" | "online" | "udhar" | "split">("cash");
+  const [splitCash, setSplitCash] = useState<number | "">("");
+  const [splitOnline, setSplitOnline] = useState<number | "">("");
   const [settings, setSettings] = useState<Settings>({
     customerName: "",
     date: new Date().toISOString().slice(0, 10),
@@ -73,6 +76,23 @@ export function POSApp() {
   const grandTotal = subtotal + loadingCharge;
   const rounded = Math.ceil(grandTotal / 10) * 10;
   const roundOff = rounded - grandTotal;
+
+  // ── Settlement calculations ──────────────────────────────────────────────────
+  const parsedSplitCash = Number(splitCash) || 0;
+  const parsedSplitOnline = Number(splitOnline) || 0;
+  const splitUdhar = Math.max(0, rounded - (parsedSplitCash + parsedSplitOnline));
+
+  let cashAmt = 0;
+  let onlineAmt = 0;
+  let udharAmt = 0;
+  if (paymentMode === "cash") cashAmt = rounded;
+  else if (paymentMode === "online") onlineAmt = rounded;
+  else if (paymentMode === "udhar") udharAmt = rounded;
+  else if (paymentMode === "split") {
+    cashAmt = parsedSplitCash;
+    onlineAmt = parsedSplitOnline;
+    udharAmt = splitUdhar;
+  }
 
   // ── DnD sensors (delay-based for mobile-safe touch) ─────────────────────────
   const sensors = useSensors(
@@ -104,6 +124,9 @@ export function POSApp() {
     setBagsBuffer("");
     setInputPhase("weight");
     setCurrentBillId(null);
+    setPaymentMode("cash");
+    setSplitCash("");
+    setSplitOnline("");
     setSettings((p) => ({ ...p, customerName: "", date: new Date().toISOString().slice(0, 10) }));
   }, []);
 
@@ -121,6 +144,9 @@ export function POSApp() {
       items,
       total_amount: grandTotal,
       total_bags: totalBags,
+      cash_amount: cashAmt,
+      online_amount: onlineAmt,
+      udhar_amount: udharAmt,
     };
     try {
       if (currentBillId) {
@@ -136,19 +162,34 @@ export function POSApp() {
     } finally {
       setIsSaving(false);
     }
-  }, [items, settings, grandTotal, totalBags, currentBillId]);
+  }, [items, settings, grandTotal, totalBags, currentBillId, cashAmt, onlineAmt, udharAmt]);
 
   // ── Load bill from history ────────────────────────────────────────────────────
-  const handleLoadBill = useCallback((bill: { id: string; customerName: string; date: string; items: BillItem[] }) => {
+  const handleLoadBill = useCallback((bill: { id: string; customerName: string; date: string; items: BillItem[]; cash_amount: number; online_amount: number; udhar_amount: number }) => {
     setItems(bill.items);
     setSettings((p) => ({ ...p, customerName: bill.customerName, date: bill.date }));
     setCurrentBillId(bill.id);
+    
+    const c = bill.cash_amount || 0;
+    const o = bill.online_amount || 0;
+    const u = bill.udhar_amount || 0;
+    
+    if (c > 0 && o === 0 && u === 0) setPaymentMode("cash");
+    else if (o > 0 && c === 0 && u === 0) setPaymentMode("online");
+    else if (u > 0 && c === 0 && o === 0) setPaymentMode("udhar");
+    else if (c === 0 && o === 0 && u === 0) setPaymentMode("cash");
+    else {
+      setPaymentMode("split");
+      setSplitCash(c || "");
+      setSplitOnline(o || "");
+    }
+
     setDisplay("0");
     setWeightBuffer("");
     setBagsBuffer("");
     setInputPhase("weight");
     setShowHistory(false);
-    toast.success("Bill loaded — tap Save to update.");
+    toast.success("Bill loaded — tap Update to save changes.");
   }, []);
 
   // ── Export handlers ───────────────────────────────────────────────────────────
@@ -166,9 +207,12 @@ export function POSApp() {
     text += `H: ${heavyBags} | L: ${lightBags}\n`;
     text += `Loading: ₹${loadingCharge}\n`;
     if (roundOff !== 0) text += `Round Off: ${roundOff > 0 ? "+" : ""}${roundOff}\n`;
-    text += `*FINAL BILL: ₹${rounded}*`;
+    text += `*FINAL BILL: ₹${rounded}*\n`;
+    if (onlineAmt > 0 || udharAmt > 0 || paymentMode === "split") {
+      text += `\nPayment Details:\nSettled via: Cash: ₹${cashAmt} | Online: ₹${onlineAmt} | Udhar: ₹${udharAmt}`;
+    }
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags]);
+  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags, paymentMode, cashAmt, onlineAmt, udharAmt]);
 
   const handleSaveImage = useCallback(() => {
     vibrate();
@@ -192,6 +236,9 @@ export function POSApp() {
 
     // Dynamic height calculation
     const extraRows = roundOff !== 0 ? 1 : 0;
+    const hasPaymentDetails = onlineAmt > 0 || udharAmt > 0 || paymentMode === "split";
+    const paymentRows = hasPaymentDetails ? 3 : 0;
+
     const totalRows =
       2  // title + customer line
       + 1  // separator
@@ -203,6 +250,7 @@ export function POSApp() {
       + (settings.addLoading ? 1 : 0)
       + extraRows
       + 2  // final bill (2 lines for bold)
+      + paymentRows
       + 1; // bottom padding row
     canvas.width = W;
     canvas.height = PAD * 2 + totalRows * LH + 10;
@@ -310,6 +358,18 @@ export function POSApp() {
     ctx.fillText("FINAL BILL", PAD, y);
     textR(`Rs.${rounded.toLocaleString("en-IN")}`, COL_AMT, y);
 
+    // ── Payment Details ───────────────────────────────────────────────
+    if (hasPaymentDetails) {
+      y += LH + 8;
+      ctx.font = `bold 12px ${MONO}`;
+      ctx.textAlign = "center";
+      ctx.fillText("Payment Details", W / 2, y);
+      
+      y += LH;
+      ctx.font = `12px ${MONO}`;
+      ctx.fillText(`Settled via: Cash: Rs.${cashAmt} | Online: Rs.${onlineAmt} | Udhar: Rs.${udharAmt}`, W / 2, y);
+    }
+
     // ── Download ──────────────────────────────────────────────────────
     const dataUrl = canvas.toDataURL("image/png");
     const a = document.createElement("a");
@@ -317,7 +377,7 @@ export function POSApp() {
     const sanitizedName = (settings.customerName || "Cash_Sale").replace(/\s+/g, "_");
     a.download = `${settings.date}_${sanitizedName}.png`;
     a.click();
-  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags]);
+  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags, paymentMode, cashAmt, onlineAmt, udharAmt]);
 
   // ── Keypad handlers ──────────────────────────────────────────────────────────
   const appendDigit = useCallback(
@@ -523,10 +583,62 @@ export function POSApp() {
       </div>
 
       {/* ── BOTTOM HALF — Fixed Input ────────────────────────────────── */}
-      <div className="shrink-0 bg-slate-900 border-t border-slate-800">
+      <div className="shrink-0 bg-slate-900 border-t border-slate-800 flex flex-col">
+
+        {/* Smart Settlement UI */}
+        <div className="mx-2 mt-2 mb-1">
+          <div className="flex gap-1.5 p-1 bg-slate-950 rounded border border-slate-800">
+            {["cash", "online", "udhar", "split"].map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setPaymentMode(mode as any)}
+                className={`flex-1 py-1 text-[11px] font-bold uppercase rounded transition-colors ${
+                  paymentMode === mode
+                    ? "bg-amber-500 text-black shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+          
+          {paymentMode === "split" && (
+            <div className="flex gap-2 mt-2">
+              <div className="flex-1">
+                <label className="block text-[9px] text-slate-500 mb-0.5 font-bold tracking-wider">CASH ₹</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={splitCash}
+                  onChange={(e) => setSplitCash(e.target.value ? Number(e.target.value) : "")}
+                  placeholder="0"
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[9px] text-slate-500 mb-0.5 font-bold tracking-wider">ONLINE ₹</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={splitOnline}
+                  onChange={(e) => setSplitOnline(e.target.value ? Number(e.target.value) : "")}
+                  placeholder="0"
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+              <div className="flex-1 opacity-80">
+                <label className="block text-[9px] text-amber-500/80 mb-0.5 font-bold tracking-wider">UDHAR ₹</label>
+                <div className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-sm text-amber-400 font-bold overflow-hidden text-ellipsis">
+                  {splitUdhar}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Casio Display */}
-        <div className="mx-2 mb-1.5 px-3 py-1.5 casio-display rounded flex items-center justify-between">
+        <div className="mx-2 mb-1.5 mt-1 px-3 py-1.5 casio-display rounded flex items-center justify-between">
           <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 truncate max-w-[40%]">{getDisplayLabel()}</span>
           <span className="text-lg font-bold text-right">{display}</span>
         </div>
