@@ -6,7 +6,8 @@ import {
   MessageCircle,
   Download,
   RefreshCw,
-  Wheat,
+  CloudUpload,
+  Clock,
 } from "lucide-react";
 import {
   DndContext,
@@ -18,9 +19,12 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { toast } from "sonner";
 import { SettingsModal } from "@/components/SettingsModal";
 import { BillTable } from "@/components/BillTable";
 import { TotalsSummary } from "@/components/TotalsSummary";
+import { HistoryDrawer } from "@/components/HistoryDrawer";
+import { saveBill, updateBill } from "@/lib/billsApi";
 
 export type BillItem = {
   id: number;
@@ -49,6 +53,9 @@ export function POSApp() {
   const [weightBuffer, setWeightBuffer] = useState<string>("");
   const [bagsBuffer, setBagsBuffer] = useState<string>("");
   const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentBillId, setCurrentBillId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     customerName: "",
     date: new Date().toISOString().slice(0, 10),
@@ -96,7 +103,52 @@ export function POSApp() {
     setWeightBuffer("");
     setBagsBuffer("");
     setInputPhase("weight");
-    setSettings((p) => ({ ...p, customerName: "" }));
+    setCurrentBillId(null);
+    setSettings((p) => ({ ...p, customerName: "", date: new Date().toISOString().slice(0, 10) }));
+  }, []);
+
+  // ── Save to Cloud ────────────────────────────────────────────────────────────
+  const handleSave = useCallback(async () => {
+    vibrate();
+    if (items.length === 0) {
+      toast.error("Add at least one item before saving.");
+      return;
+    }
+    setIsSaving(true);
+    const payload = {
+      customer_name: settings.customerName || "Cash",
+      bill_date: new Date().toISOString(),
+      items,
+      total_amount: grandTotal,
+      total_bags: totalBags,
+    };
+    try {
+      if (currentBillId) {
+        await updateBill(currentBillId, payload);
+        toast.success("Bill updated!");
+      } else {
+        const newId = await saveBill(payload);
+        setCurrentBillId(newId);
+        toast.success("Bill saved to cloud!");
+      }
+    } catch (err) {
+      toast.error(`Save failed: ${(err as Error).message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [items, settings, grandTotal, totalBags, currentBillId]);
+
+  // ── Load bill from history ────────────────────────────────────────────────────
+  const handleLoadBill = useCallback((bill: { id: string; customerName: string; date: string; items: BillItem[] }) => {
+    setItems(bill.items);
+    setSettings((p) => ({ ...p, customerName: bill.customerName, date: bill.date }));
+    setCurrentBillId(bill.id);
+    setDisplay("0");
+    setWeightBuffer("");
+    setBagsBuffer("");
+    setInputPhase("weight");
+    setShowHistory(false);
+    toast.success("Bill loaded — tap Save to update.");
   }, []);
 
   // ── Export handlers ───────────────────────────────────────────────────────────
@@ -345,64 +397,87 @@ export function POSApp() {
       {/* ── TOP HALF ─────────────────────────────────────────────────── */}
       <div className="flex flex-col min-h-0 flex-1 bg-slate-950">
 
-        {/* Header — centered buttons, settings pinned right */}
-        <div className="relative flex items-center px-2 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
+        {/* Header — icon-only buttons, perfectly centered */}
+        <div className="relative flex items-center justify-between px-2 py-1.5 bg-slate-900 border-b border-slate-800 shrink-0">
 
-          {/* Dummy spacer — same width as settings button so center group is truly centered */}
-          <div className="w-[28px] shrink-0" />
-
-          {/* Center group */}
-          <div className="flex-1 flex items-center justify-center gap-1.5">
-            {/* LOAD toggle */}
-            <div className="flex items-center gap-1 bg-slate-800 px-1.5 py-1 rounded border border-slate-700">
-              <span className="text-[9px] font-medium text-slate-300">LOAD</span>
-              <button
-                onClick={() => { vibrate(); setSettings(p => ({ ...p, addLoading: !p.addLoading })); }}
-                className={`relative w-6 h-3 rounded-full transition-colors ${
-                  settings.addLoading ? "bg-amber-500" : "bg-slate-600"
+          {/* LOAD toggle — left-pinned */}
+          <div className="flex items-center gap-1 bg-slate-800 px-2 py-1.5 rounded border border-slate-700 shrink-0">
+            <span className="text-[9px] font-bold text-slate-400 tracking-wide">LOAD</span>
+            <button
+              onClick={() => { vibrate(); setSettings(p => ({ ...p, addLoading: !p.addLoading })); }}
+              className={`relative w-7 h-3.5 rounded-full transition-colors ${
+                settings.addLoading ? "bg-amber-500" : "bg-slate-600"
+              }`}
+            >
+              <span
+                className={`absolute top-[2px] left-[2px] w-2.5 h-2.5 bg-white rounded-full shadow transition-transform ${
+                  settings.addLoading ? "translate-x-3" : "translate-x-0"
                 }`}
-              >
-                <span
-                  className={`absolute top-[1px] left-[1px] w-2.5 h-2.5 bg-white rounded-full shadow transition-transform ${
-                    settings.addLoading ? "translate-x-3" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
+          </div>
+
+          {/* Center icon-only action buttons */}
+          <div className="flex items-center justify-center gap-1.5">
             {/* New */}
             <button
               onClick={handleNewBill}
-              className="flex items-center gap-1 bg-slate-600 hover:bg-slate-500 active:bg-slate-400 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
+              title="New Bill"
+              className="w-9 h-9 flex items-center justify-center bg-slate-600 hover:bg-slate-500 active:bg-slate-400 rounded-lg text-white keypad-btn transition-colors"
             >
-              <RefreshCw size={11} />
-              <span>New</span>
+              <RefreshCw size={16} />
+            </button>
+            {/* Save / Update */}
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              title={currentBillId ? "Update Bill" : "Save Bill"}
+              className="w-9 h-9 flex items-center justify-center bg-amber-600 hover:bg-amber-500 active:bg-amber-400 disabled:opacity-50 rounded-lg text-white keypad-btn transition-colors"
+            >
+              <CloudUpload size={17} />
+            </button>
+            {/* History */}
+            <button
+              onClick={() => { vibrate(); setShowHistory(true); }}
+              title="Bill History"
+              className="w-9 h-9 flex items-center justify-center bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-white keypad-btn transition-colors"
+            >
+              <Clock size={16} />
             </button>
             {/* WhatsApp */}
             <button
               onClick={handleWhatsApp}
-              className="flex items-center gap-1 bg-green-700 hover:bg-green-600 active:bg-green-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
+              title="Share on WhatsApp"
+              className="w-9 h-9 flex items-center justify-center bg-green-700 hover:bg-green-600 active:bg-green-500 rounded-lg text-white keypad-btn transition-colors"
             >
-              <MessageCircle size={12} />
-              <span>WA</span>
+              <MessageCircle size={16} />
             </button>
             {/* Image */}
             <button
               onClick={handleSaveImage}
-              className="flex items-center gap-1 bg-blue-700 hover:bg-blue-600 active:bg-blue-500 text-[11px] px-2 py-1 rounded text-white keypad-btn font-medium transition-colors"
+              title="Save as Image"
+              className="w-9 h-9 flex items-center justify-center bg-blue-700 hover:bg-blue-600 active:bg-blue-500 rounded-lg text-white keypad-btn transition-colors"
             >
-              <Download size={12} />
-              <span>Image</span>
+              <Download size={16} />
             </button>
           </div>
 
-          {/* Settings — pinned to right */}
-          <button
-            onClick={() => { vibrate(); setShowSettings(true); }}
-            className="w-[28px] flex items-center justify-center bg-slate-700 hover:bg-slate-600 p-1 rounded keypad-btn shrink-0"
-          >
-            <Settings size={14} className="text-slate-300" />
-          </button>
+          {/* Settings — right-pinned */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => { vibrate(); setShowSettings(true); }}
+              title="Settings"
+              className="w-9 h-9 flex items-center justify-center bg-slate-700 hover:bg-slate-600 rounded-lg keypad-btn"
+            >
+              <Settings size={16} className="text-slate-300" />
+            </button>
+            {/* EDIT mode indicator dot */}
+            {currentBillId && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-slate-900" />
+            )}
+          </div>
         </div>
+
 
 
         {/* Header Stats */}
@@ -544,6 +619,14 @@ export function POSApp() {
           settings={settings}
           onSave={(s) => { setSettings(s); setShowSettings(false); }}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* History Drawer */}
+      {showHistory && (
+        <HistoryDrawer
+          onClose={() => setShowHistory(false)}
+          onLoad={handleLoadBill}
         />
       )}
     </div>
