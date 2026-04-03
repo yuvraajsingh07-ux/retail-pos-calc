@@ -86,16 +86,22 @@ function SortableRow({ item, idx, onDelete, onUpdateBags, onUpdateRate }: Sortab
       </td>
       {/* Rate — inline editable input */}
       <td className="text-right px-1 py-1 w-[15%]">
-        <input
-          type="number"
-          value={item.rate}
+        <div className="flex justify-end">
+          <input
+            type="number"
+          value={item.rate === 0 ? "" : item.rate}
           onChange={(e) => {
+            if (e.target.value === "") {
+              onUpdateRate(item.id, 0);
+              return;
+            }
             const v = parseFloat(e.target.value);
             if (!isNaN(v) && v >= 0) onUpdateRate(item.id, v);
           }}
-          className="w-full bg-transparent border-none outline-none text-right text-slate-400 text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-16 bg-transparent border-none outline-none text-right text-slate-400 text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           inputMode="decimal"
         />
+        </div>
       </td>
       <td className="text-right px-1 py-1 font-semibold text-white w-[29%]">
         ₹{item.amount.toLocaleString("en-IN")}
