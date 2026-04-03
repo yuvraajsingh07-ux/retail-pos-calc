@@ -65,7 +65,7 @@ function SortableRow({ item, idx, onDelete, onUpdateBags, onUpdateRate }: Sortab
         <div className="text-[9px] text-slate-500 leading-tight">{totalWt} kg total</div>
       </td>
       {/* Bags — compact [-] count [+] control */}
-      <td className="text-right px-0.5 py-1 w-[18%]">
+      <td className="text-right pl-0.5 pr-3 py-1 w-[20%]">
         <div className="flex items-center justify-end gap-0.5">
           <button
             onClick={() => onUpdateBags(item.id, -1)}
@@ -85,7 +85,7 @@ function SortableRow({ item, idx, onDelete, onUpdateBags, onUpdateRate }: Sortab
         </div>
       </td>
       {/* Rate — inline editable input */}
-      <td className="text-right px-1 py-1 w-[15%]">
+      <td className="text-right px-1 py-1 w-[16%]">
         <div className="flex justify-end">
           <input
             type="number"
@@ -103,7 +103,7 @@ function SortableRow({ item, idx, onDelete, onUpdateBags, onUpdateRate }: Sortab
         />
         </div>
       </td>
-      <td className="text-right px-1 py-1 font-semibold text-white w-[29%]">
+      <td className="text-right px-1 py-1 font-semibold text-white w-[26%]">
         ₹{item.amount.toLocaleString("en-IN")}
       </td>
       <td className="text-center py-1 w-[10%]">
@@ -136,9 +136,9 @@ export function BillTable({ items, onDelete, onUpdateBags, onUpdateRate }: BillT
         <tr className="text-slate-500">
           <th className="w-[6%]"></th>
           <th className="text-left px-1 py-1 w-[22%]">Item</th>
-          <th className="text-right px-1 py-1 w-[18%]">Bags</th>
-          <th className="text-right px-1 py-1 w-[15%]">Rate</th>
-          <th className="text-right px-1 py-1 w-[29%]">Amt</th>
+          <th className="text-right pl-1 pr-3 py-1 w-[20%]">Bags</th>
+          <th className="text-right px-1 py-1 w-[16%]">Rate</th>
+          <th className="text-right px-1 py-1 w-[26%]">Amt</th>
           <th className="w-[10%]"></th>
         </tr>
       </thead>
