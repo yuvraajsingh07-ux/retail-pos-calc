@@ -56,6 +56,7 @@ export function POSApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [customNames, setCustomNames] = useState<Record<number, string>>({});
   const [currentBillId, setCurrentBillId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"cash" | "online" | "udhar" | "split">("cash");
@@ -212,153 +213,77 @@ export function POSApp() {
 
     // ── Layout constants ──────────────────────────────────────────────
     const W = 520;
-    const PAD = 22;
-    const ROW_H = 22;      // row height for item rows
-    const LH = 20;         // general line height
-    const MONO = "'Courier New', Courier, monospace";
+    const PAD = 24;
+    const LH = 26;         // general line height
+    const MONO = "sans-serif"; // standard system sans-serif font for reliable emojis
 
-    // Column x positions (left-aligned start)
-    const COL_ITEM = PAD;
-    const COL_BAGS = 160;
-    const COL_WT   = 215;
-    const COL_RATE = 295;
-    const COL_AMT  = W - PAD;  // right-aligned
-
-    // Dynamic height calculation
-    const extraRows = roundOff !== 0 ? 1 : 0;
-    const hasPaymentDetails = onlineAmt > 0 || udharAmt > 0 || paymentMode === "split";
-    const paymentRows = hasPaymentDetails ? 3 : 0;
+    const loadingLines = loadingCharge > 0 ? 1 : 0;
+    const extraSpace = 2; // bottom padding spaces
 
     const totalRows =
-      2  // title + customer line
+      2  // Invoice + Date
       + 1  // separator
-      + 1  // table header
-      + 1  // separator
+      + 1  // blank gap
       + items.length
+      + 1  // blank gap
       + 1  // separator
-      + 3  // bags / weight / H-L
-      + (settings.addLoading ? 1 : 0)
-      + extraRows
-      + 2  // final bill (2 lines for bold)
-      + paymentRows
-      + 1; // bottom padding row
+      + loadingLines
+      + 1  // grand total
+      + extraSpace;
+
     canvas.width = W;
-    canvas.height = PAD * 2 + totalRows * LH + 10;
+    canvas.height = PAD * 2 + totalRows * LH;
 
     // ── Background ────────────────────────────────────────────────────
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#000000";
+    ctx.textBaseline = "middle";
 
-    const drawSeparator = (y: number) => {
-      ctx.beginPath();
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 1;
-      ctx.moveTo(PAD, y);
-      ctx.lineTo(W - PAD, y);
-      ctx.stroke();
+    let y = PAD + LH / 2;
+
+    const formatter = new Intl.NumberFormat('en-IN');
+    const formattedDate = new Date(settings.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    // Helper for bold prefix
+    const drawLine = (boldPart: string, normalPart: string, yPos: number) => {
+      ctx.font = `bold 16px ${MONO}`;
+      ctx.fillText(boldPart, PAD, yPos);
+      const w = ctx.measureText(boldPart).width;
+      ctx.font = `16px ${MONO}`;
+      ctx.fillText(" " + normalPart, PAD + w, yPos);
     };
 
-    const textR = (text: string, x: number, y: number) => {
-      const prev = ctx.textAlign;
-      ctx.textAlign = "right";
-      ctx.fillText(text, x, y);
-      ctx.textAlign = prev;
-    };
-
-    let y = PAD + 18;
-
-    // ── Header ────────────────────────────────────────────────────────
-    ctx.font = `bold 17px ${MONO}`;
-    ctx.textAlign = "center";
-    ctx.fillText("AMARNATH PRADEEP KUMAR GARG", W / 2, y);
-
+    drawLine("🧾 Invoice:", settings.customerName || "Cash", y);
     y += LH;
-    ctx.font = `13px ${MONO}`;
-    ctx.fillText(
-      `Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}`,
-      W / 2,
-      y
-    );
 
-    y += LH + 4;
-    drawSeparator(y);
-    y += 10;
+    drawLine("📅 Date:", formattedDate, y);
+    y += LH;
 
-    // ── Table header ──────────────────────────────────────────────────
-    ctx.font = `bold 12px ${MONO}`;
-    ctx.textAlign = "left";
-    ctx.fillText("ITEM", COL_ITEM, y);
-    ctx.fillText("BAGS", COL_BAGS, y);
-    ctx.fillText("WT(kg)", COL_WT, y);
-    ctx.fillText("RATE", COL_RATE, y);
-    textR("AMOUNT", COL_AMT, y);
+    ctx.font = `16px ${MONO}`;
+    // Using 14 dividers to span a reasonable chunk of width
+    ctx.fillText("〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️", PAD, y);
+    y += LH * 1.5;
 
-    y += 6;
-    drawSeparator(y);
-    y += ROW_H - 4;
-
-    // ── Item rows ─────────────────────────────────────────────────────
-    ctx.font = `12px ${MONO}`;
     items.forEach((item) => {
-      const totalWt = item.weightKg * item.bags;
-      ctx.textAlign = "left";
-      ctx.fillText(`${item.weightKg}KG Bag`, COL_ITEM, y);
-      ctx.fillText(String(item.bags), COL_BAGS, y);
-      ctx.fillText(String(totalWt), COL_WT, y);
-      ctx.fillText(`${item.rate.toFixed(0)}`, COL_RATE, y);
-      textR(`Rs.${item.amount.toLocaleString("en-IN")}`, COL_AMT, y);
-      y += ROW_H;
+      const customName = customNames[item.id] && customNames[item.id].trim() !== ""
+        ? customNames[item.id]
+        : "Item";
+      const lineStr = `📦 ${customName} X ${item.bags} Bags @ ₹${formatter.format(item.rate)} = ₹${formatter.format(item.amount)}`;
+      ctx.fillText(lineStr, PAD, y);
+      y += LH;
     });
 
-    // ── Separator after items ─────────────────────────────────────────
-    y += 2;
-    drawSeparator(y);
+    y += LH * 0.5;
+    ctx.fillText("〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️〰️", PAD, y);
     y += LH;
 
-    // ── Subtotals block ───────────────────────────────────────────────
-    ctx.font = `12px ${MONO}`;
-    ctx.textAlign = "left";
-    ctx.fillText(`Total Bags : ${totalBags}`, PAD, y);
-    y += LH;
-    ctx.fillText(`Total Weight: ${totalQuintals.toFixed(2)} qtl`, PAD, y);
-    y += LH;
-    ctx.fillText(`Heavy : ${heavyBags}  |  Light : ${lightBags}`, PAD, y);
-    y += LH;
-
-    if (settings.addLoading) {
-      ctx.fillText(`Loading (Rs.4/bag):`, PAD, y);
-      textR(`Rs.${loadingCharge}`, COL_AMT, y);
+    if (loadingCharge > 0) {
+      ctx.fillText(`🚚 Loading: ₹${formatter.format(loadingCharge)}`, PAD, y);
       y += LH;
     }
 
-    if (roundOff !== 0) {
-      ctx.fillText(`Round Off:`, PAD, y);
-      textR(`${roundOff > 0 ? "+" : ""}${roundOff}`, COL_AMT, y);
-      y += LH;
-    }
-
-    // ── Final bill ────────────────────────────────────────────────────
-    y += 4;
-    drawSeparator(y);
-    y += LH;
-
-    ctx.font = `bold 16px ${MONO}`;
-    ctx.textAlign = "left";
-    ctx.fillText("FINAL BILL", PAD, y);
-    textR(`Rs.${rounded.toLocaleString("en-IN")}`, COL_AMT, y);
-
-    // ── Payment Details ───────────────────────────────────────────────
-    if (hasPaymentDetails) {
-      y += LH + 8;
-      ctx.font = `bold 12px ${MONO}`;
-      ctx.textAlign = "center";
-      ctx.fillText("Payment Details", W / 2, y);
-      
-      y += LH;
-      ctx.font = `12px ${MONO}`;
-      ctx.fillText(`Settled via: Cash: Rs.${cashAmt} | Online: Rs.${onlineAmt} | Udhar: Rs.${udharAmt}`, W / 2, y);
-    }
+    drawLine("💰 Grand Total:", `₹${formatter.format(rounded)}`, y);
 
     // ── Download ──────────────────────────────────────────────────────
     const dataUrl = canvas.toDataURL("image/png");
@@ -367,7 +292,7 @@ export function POSApp() {
     const sanitizedName = (settings.customerName || "Cash_Sale").replace(/\s+/g, "_");
     a.download = `${settings.date}_${sanitizedName}.png`;
     a.click();
-  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags, paymentMode, cashAmt, onlineAmt, udharAmt]);
+  }, [items, settings, loadingCharge, rounded, customNames]);
 
   // ── Keypad handlers ──────────────────────────────────────────────────────────
   const appendDigit = useCallback(
@@ -764,6 +689,8 @@ export function POSApp() {
           date={settings.date}
           loadingCharge={loadingCharge}
           rounded={rounded}
+          customNames={customNames}
+          setCustomNames={setCustomNames}
           onClose={() => setShowWhatsAppModal(false)}
         />
       )}

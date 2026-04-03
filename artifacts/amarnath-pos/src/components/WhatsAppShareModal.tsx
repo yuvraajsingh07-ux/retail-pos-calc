@@ -8,6 +8,8 @@ interface WhatsAppShareModalProps {
   date: string;
   loadingCharge: number;
   rounded: number;
+  customNames: Record<number, string>;
+  setCustomNames: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   onClose: () => void;
 }
 
@@ -17,26 +19,30 @@ export function WhatsAppShareModal({
   date,
   loadingCharge,
   rounded,
+  customNames,
+  setCustomNames,
   onClose,
 }: WhatsAppShareModalProps) {
-  const [customNames, setCustomNames] = useState<Record<number, string>>({});
 
   const handleSend = () => {
-    let text = `Customer: ${customerName || "Cash"}\nDate: ${date}\n`;
+    const formattedDate = new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    
+    let text = `*🧾 Invoice:* ${customerName || "Cash"}\n*📅 Date:* ${formattedDate}\n〰️〰️〰️〰️〰️〰️〰️〰️\n\n`;
     items.forEach((item) => {
       const name = customNames[item.id] && customNames[item.id].trim() !== "" 
         ? customNames[item.id] 
         : "Item";
-      text += `${name}\n₹${item.rate.toLocaleString("en-IN")} x ${item.bags} Bags = ₹${item.amount.toLocaleString("en-IN")}\n\n`;
+      text += `📦 ${name} X ${item.bags} Bags @ ₹${item.rate.toLocaleString("en-IN")} = ₹${item.amount.toLocaleString("en-IN")}\n`;
     });
     
     // Trim trailing newlines before appending Total/Loading
-    text = text.trimEnd() + "\n";
+    text = text.trimEnd() + "\n\n〰️〰️〰️〰️〰️〰️〰️〰️\n";
 
     if (loadingCharge > 0) {
-      text += `Loading: ₹${loadingCharge}\n`;
+      text += `🚚 Loading: ₹${loadingCharge}\n`;
     }
-    text += `Total: ₹${rounded.toLocaleString("en-IN")}`;
+    text += `*💰 Grand Total:* ₹${rounded.toLocaleString("en-IN")}`;
+    
     window.open(`https://wa.me/?text=${encodeURIComponent(text.trim())}`, "_blank");
     onClose();
   };
@@ -86,8 +92,9 @@ export function WhatsAppShareModal({
           <div className="text-[9px] text-slate-500 font-bold tracking-wider mb-2">PREVIEW</div>
           <div className="space-y-2">
             <div className="text-[10px] text-slate-300 font-mono pb-1 border-b border-slate-800">
-              Customer: {customerName || "Cash"}<br />
-              Date: {date}
+              *🧾 Invoice:* {customerName || "Cash"}<br />
+              *📅 Date:* {new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}<br/>
+              〰️〰️〰️〰️〰️〰️〰️〰️
             </div>
             {items.map((item) => {
               const name = customNames[item.id] && customNames[item.id].trim() !== "" 
@@ -95,17 +102,17 @@ export function WhatsAppShareModal({
                 : "Item";
               return (
                 <div key={item.id} className="text-[10px] text-slate-300 font-mono">
-                  <div>{name}</div>
-                  <div>₹{item.rate.toLocaleString("en-IN")} x {item.bags} Bags = ₹{item.amount.toLocaleString("en-IN")}</div>
+                  📦 {name} X {item.bags} Bags @ ₹{item.rate.toLocaleString("en-IN")} = ₹{item.amount.toLocaleString("en-IN")}
                 </div>
               );
             })}
             <div className="text-[10px] font-mono border-t border-slate-700 mt-2 pt-2 space-y-1">
+              <div className="text-slate-300">〰️〰️〰️〰️〰️〰️〰️〰️</div>
               {loadingCharge > 0 && (
-                <div className="text-slate-400">Loading: ₹{loadingCharge}</div>
+                <div className="text-slate-400">🚚 Loading: ₹{loadingCharge}</div>
               )}
               <div className="font-bold text-white">
-                Total: ₹{rounded.toLocaleString("en-IN")}
+                *💰 Grand Total:* ₹{rounded.toLocaleString("en-IN")}
               </div>
             </div>
           </div>
