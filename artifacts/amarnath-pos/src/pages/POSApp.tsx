@@ -24,6 +24,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { BillTable } from "@/components/BillTable";
 import { TotalsSummary } from "@/components/TotalsSummary";
 import { HistoryDrawer } from "@/components/HistoryDrawer";
+import { WhatsAppShareModal } from "@/components/WhatsAppShareModal";
 import { saveBill, updateBill } from "@/lib/billsApi";
 
 export type BillItem = {
@@ -54,6 +55,7 @@ export function POSApp() {
   const [bagsBuffer, setBagsBuffer] = useState<string>("");
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [currentBillId, setCurrentBillId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [paymentMode, setPaymentMode] = useState<"cash" | "online" | "udhar" | "split">("cash");
@@ -195,24 +197,12 @@ export function POSApp() {
   // ── Export handlers ───────────────────────────────────────────────────────────
   const handleWhatsApp = useCallback(() => {
     vibrate();
-    let text = `*AMARNATH PRADEEP KUMAR GARG*\n`;
-    text += `Customer: ${settings.customerName || "Cash"} | Date: ${settings.date}\n`;
-    text += `-----------------------------\n`;
-    items.forEach((item) => {
-      const rowWt = item.weightKg * item.bags;
-      text += `${item.weightKg}KG x ${item.bags} = ${rowWt}kg @ ₹${item.rate.toFixed(0)} -> ₹${item.amount.toLocaleString("en-IN")}\n`;
-    });
-    text += `-----------------------------\n`;
-    text += `Total Bags: ${totalBags} | Weight: ${totalQuintals.toFixed(2)} qtl\n`;
-    text += `H: ${heavyBags} | L: ${lightBags}\n`;
-    text += `Loading: ₹${loadingCharge}\n`;
-    if (roundOff !== 0) text += `Round Off: ${roundOff > 0 ? "+" : ""}${roundOff}\n`;
-    text += `*FINAL BILL: ₹${rounded}*\n`;
-    if (onlineAmt > 0 || udharAmt > 0 || paymentMode === "split") {
-      text += `\nPayment Details:\nSettled via: Cash: ₹${cashAmt} | Online: ₹${onlineAmt} | Udhar: ₹${udharAmt}`;
+    if (items.length === 0) {
+      toast.error("Add at least one item before sharing.");
+      return;
     }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-  }, [items, settings, totalBags, totalQuintals, loadingCharge, roundOff, rounded, heavyBags, lightBags, paymentMode, cashAmt, onlineAmt, udharAmt]);
+    setShowWhatsAppModal(true);
+  }, [items]);
 
   const handleSaveImage = useCallback(() => {
     vibrate();
@@ -445,6 +435,25 @@ export function POSApp() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  const updateItemBags = useCallback((id: number, delta: number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const newBags = Math.max(1, item.bags + delta);
+        return { ...item, bags: newBags, amount: newBags * item.rate };
+      })
+    );
+  }, []);
+
+  const updateItemRate = useCallback((id: number, rate: number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        return { ...item, rate, amount: item.bags * rate };
+      })
+    );
+  }, []);
+
   const getDisplayLabel = () => {
     if (inputPhase === "weight") return "Enter weight";
     if (inputPhase === "bags") return `${weightBuffer}KG — bags?`;
@@ -567,7 +576,12 @@ export function POSApp() {
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <BillTable items={items} onDelete={deleteItem} />
+            <BillTable
+                items={items}
+                onDelete={deleteItem}
+                onUpdateBags={updateItemBags}
+                onUpdateRate={updateItemRate}
+              />
           </DndContext>
         </div>
 
@@ -739,6 +753,18 @@ export function POSApp() {
         <HistoryDrawer
           onClose={() => setShowHistory(false)}
           onLoad={handleLoadBill}
+        />
+      )}
+
+      {/* WhatsApp Share Modal */}
+      {showWhatsAppModal && (
+        <WhatsAppShareModal
+          items={items}
+          customerName={settings.customerName}
+          date={settings.date}
+          loadingCharge={loadingCharge}
+          rounded={rounded}
+          onClose={() => setShowWhatsAppModal(false)}
         />
       )}
     </div>

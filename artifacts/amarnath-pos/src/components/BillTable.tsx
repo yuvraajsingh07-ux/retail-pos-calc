@@ -1,4 +1,4 @@
-import { Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, Minus, Plus } from "lucide-react";
 import {
   SortableContext,
   useSortable,
@@ -10,15 +10,19 @@ import type { BillItem } from "@/pages/POSApp";
 interface BillTableProps {
   items: BillItem[];
   onDelete: (id: number) => void;
+  onUpdateBags: (id: number, delta: number) => void;
+  onUpdateRate: (id: number, rate: number) => void;
 }
 
 interface SortableRowProps {
   item: BillItem;
   idx: number;
   onDelete: (id: number) => void;
+  onUpdateBags: (id: number, delta: number) => void;
+  onUpdateRate: (id: number, rate: number) => void;
 }
 
-function SortableRow({ item, idx, onDelete }: SortableRowProps) {
+function SortableRow({ item, idx, onDelete, onUpdateBags, onUpdateRate }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -60,9 +64,40 @@ function SortableRow({ item, idx, onDelete }: SortableRowProps) {
         <div className="font-medium text-amber-300 text-[11px] leading-tight">{item.weightKg}KG Bag</div>
         <div className="text-[9px] text-slate-500 leading-tight">{totalWt} kg total</div>
       </td>
-      <td className="text-right px-1 py-1 text-slate-300 w-[12%]">{item.bags}</td>
-      <td className="text-right px-1 py-1 text-slate-400 w-[15%]">{item.rate.toFixed(0)}</td>
-      <td className="text-right px-1 py-1 font-semibold text-white w-[35%]">
+      {/* Bags — compact [-] count [+] control */}
+      <td className="text-right px-0.5 py-1 w-[18%]">
+        <div className="flex items-center justify-end gap-0.5">
+          <button
+            onClick={() => onUpdateBags(item.id, -1)}
+            className="w-5 h-5 flex items-center justify-center rounded bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-slate-300 transition-colors"
+            aria-label="Decrease bags"
+          >
+            <Minus size={9} />
+          </button>
+          <span className="text-slate-300 text-[11px] w-4 text-center select-none">{item.bags}</span>
+          <button
+            onClick={() => onUpdateBags(item.id, 1)}
+            className="w-5 h-5 flex items-center justify-center rounded bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-slate-300 transition-colors"
+            aria-label="Increase bags"
+          >
+            <Plus size={9} />
+          </button>
+        </div>
+      </td>
+      {/* Rate — inline editable input */}
+      <td className="text-right px-1 py-1 w-[15%]">
+        <input
+          type="number"
+          value={item.rate}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (!isNaN(v) && v >= 0) onUpdateRate(item.id, v);
+          }}
+          className="w-full bg-transparent border-none outline-none text-right text-slate-400 text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          inputMode="decimal"
+        />
+      </td>
+      <td className="text-right px-1 py-1 font-semibold text-white w-[29%]">
         ₹{item.amount.toLocaleString("en-IN")}
       </td>
       <td className="text-center py-1 w-[10%]">
@@ -77,7 +112,7 @@ function SortableRow({ item, idx, onDelete }: SortableRowProps) {
   );
 }
 
-export function BillTable({ items, onDelete }: BillTableProps) {
+export function BillTable({ items, onDelete, onUpdateBags, onUpdateRate }: BillTableProps) {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-1">
@@ -95,16 +130,23 @@ export function BillTable({ items, onDelete }: BillTableProps) {
         <tr className="text-slate-500">
           <th className="w-[6%]"></th>
           <th className="text-left px-1 py-1 w-[22%]">Item</th>
-          <th className="text-right px-1 py-1 w-[12%]">Bags</th>
+          <th className="text-right px-1 py-1 w-[18%]">Bags</th>
           <th className="text-right px-1 py-1 w-[15%]">Rate</th>
-          <th className="text-right px-1 py-1 w-[35%]">Amt</th>
+          <th className="text-right px-1 py-1 w-[29%]">Amt</th>
           <th className="w-[10%]"></th>
         </tr>
       </thead>
       <tbody>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           {items.map((item, idx) => (
-            <SortableRow key={item.id} item={item} idx={idx} onDelete={onDelete} />
+            <SortableRow
+              key={item.id}
+              item={item}
+              idx={idx}
+              onDelete={onDelete}
+              onUpdateBags={onUpdateBags}
+              onUpdateRate={onUpdateRate}
+            />
           ))}
         </SortableContext>
       </tbody>
