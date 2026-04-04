@@ -7,7 +7,7 @@ import {
   Download,
   RefreshCw,
   CloudUpload,
-  Clock,
+  ListOrdered,
 } from "lucide-react";
 import {
   DndContext,
@@ -430,13 +430,12 @@ export function POSApp() {
             >
               <CloudUpload size={17} />
             </button>
-            {/* History */}
             <button
               onClick={() => { vibrate(); setShowHistory(true); }}
               title="Bill History"
               className="w-9 h-9 flex items-center justify-center bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-white keypad-btn transition-colors"
             >
-              <Clock size={16} />
+              <ListOrdered size={16} />
             </button>
             {/* WhatsApp */}
             <button
