@@ -688,6 +688,7 @@ export function POSApp() {
           date={settings.date}
           loadingCharge={loadingCharge}
           rounded={rounded}
+          totalBags={totalBags}
           customNames={customNames}
           setCustomNames={setCustomNames}
           onClose={() => setShowWhatsAppModal(false)}

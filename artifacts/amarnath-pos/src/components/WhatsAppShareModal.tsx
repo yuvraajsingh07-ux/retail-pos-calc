@@ -8,6 +8,7 @@ interface WhatsAppShareModalProps {
   date: string;
   loadingCharge: number;
   rounded: number;
+  totalBags: number;
   customNames: Record<number, string>;
   setCustomNames: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   onClose: () => void;
@@ -19,10 +20,12 @@ export function WhatsAppShareModal({
   date,
   loadingCharge,
   rounded,
+  totalBags,
   customNames,
   setCustomNames,
   onClose,
 }: WhatsAppShareModalProps) {
+  const [narration, setNarration] = useState("");
 
   const handleSend = () => {
     const formattedDate = new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -40,6 +43,10 @@ export function WhatsAppShareModal({
 
     if (loadingCharge > 0) {
       text += `🚚 Loading: ₹${loadingCharge}\n`;
+    }
+    text += `🛍️ Total Bags: ${totalBags}\n`;
+    if (narration.trim()) {
+      text += `📝 Note: ${narration.trim()}\n`;
     }
     text += `*💰 Grand Total:* ₹${rounded.toLocaleString("en-IN")}`;
     
@@ -87,6 +94,17 @@ export function WhatsAppShareModal({
           ))}
         </div>
 
+        {/* Narration input */}
+        <div className="mb-4">
+          <input
+            type="text"
+            value={narration}
+            onChange={(e) => setNarration(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-green-500"
+            placeholder="Add narration note (optional)..."
+          />
+        </div>
+
         {/* Preview summary */}
         <div className="bg-slate-950 rounded-lg px-3 py-2 mb-4 border border-slate-700">
           <div className="text-[9px] text-slate-500 font-bold tracking-wider mb-2">PREVIEW</div>
@@ -110,6 +128,10 @@ export function WhatsAppShareModal({
               <div className="text-slate-300">〰️〰️〰️〰️〰️〰️〰️〰️</div>
               {loadingCharge > 0 && (
                 <div className="text-slate-400">🚚 Loading: ₹{loadingCharge}</div>
+              )}
+              <div className="text-slate-300">🛍️ Total Bags: {totalBags}</div>
+              {narration.trim() && (
+                <div className="text-slate-400">📝 Note: {narration.trim()}</div>
               )}
               <div className="font-bold text-white">
                 *💰 Grand Total:* ₹{rounded.toLocaleString("en-IN")}
